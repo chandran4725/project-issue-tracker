@@ -16,7 +16,7 @@ from app.routes import (
 Base.metadata.create_all(bind=engine)
 
 
-app = FastAPI()
+app = FastAPI(redirect_slashes=False)
 
 origins = [
     "http://localhost:3000",
@@ -30,6 +30,7 @@ if settings.FRONTEND_URL and settings.FRONTEND_URL not in origins:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
