@@ -169,7 +169,20 @@ def delete_role(
             detail="Role not found"
         )
 
-    RoleRepository.delete_role(
-        role,
-        db
-    )
+    if role.employees and len(role.employees) > 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete role because employees are currently assigned to it. Please reassign those employees first."
+        )
+
+    try:
+        RoleRepository.delete_role(
+            role,
+            db
+        )
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to delete role: {str(exc)}"
+        )

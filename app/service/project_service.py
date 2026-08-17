@@ -191,7 +191,26 @@ def delete_project(
             detail="Project not found"
         )
 
-    ProjectRepository.delete_project(
-        project,
-        db
-    )
+    try:
+        from app.repository import issue as IssueRepository
+
+        # Delete dependent assignments
+        project_assignments = EmpProRelRepository.get_project_employees(pro_id, db)
+        for assign in project_assignments:
+            EmpProRelRepository.delete_assignment(assign, db)
+
+        # Delete dependent issues
+        project_issues = IssueRepository.get_issues_by_project(pro_id, db)
+        for iss in project_issues:
+            IssueRepository.delete_issue(iss, db)
+
+        ProjectRepository.delete_project(
+            project,
+            db
+        )
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to delete project: {str(exc)}"
+        )

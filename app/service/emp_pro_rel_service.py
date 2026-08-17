@@ -171,7 +171,14 @@ def delete_assignment(
             detail="Assignment not found"
         )
 
-    EmpProRelRepository.delete_assignment(
-        assignment,
-        db
-    )
+    try:
+        EmpProRelRepository.delete_assignment(
+            assignment,
+            db
+        )
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to remove assignment: {str(exc)}"
+        )

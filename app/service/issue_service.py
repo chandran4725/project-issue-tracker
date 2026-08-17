@@ -237,7 +237,14 @@ def delete_issue(
             detail="You don't have permission to delete issues"
         )
 
-    IssueRepository.delete_issue(
-        issue,
-        db
-    )
+    try:
+        IssueRepository.delete_issue(
+            issue,
+            db
+        )
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to delete issue: {str(exc)}"
+        )

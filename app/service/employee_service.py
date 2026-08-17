@@ -276,7 +276,7 @@ def delete_employee(
         db
     )
     
-    employee = EmployeeRepository.get_employee_by_id(emp_id,db)
+    employee = EmployeeRepository.get_employee_by_id(emp_id, db)
     
     if not employee:
         raise HTTPException(
@@ -293,5 +293,31 @@ def delete_employee(
             detail="Permission Denied"
         )
         
-    return EmployeeRepository.delete_employee(employee,db)
+    if current_employee.emp_id == emp_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete your own active employee profile"
+        )
+
+    try:
+        from app.repository import emp_pro_rel as EmpProRelRepository
+        from app.repository import issue as IssueRepository
+
+        # Delete dependent assignments
+        assignments = EmpProRelRepository.get_employee_projects(emp_id, db)
+        for assign in assignments:
+            EmpProRelRepository.delete_assignment(assign, db)
+
+        # Delete dependent issues
+        issues = IssueRepository.get_issues_by_employee(emp_id, db)
+        for iss in issues:
+            IssueRepository.delete_issue(iss, db)
+
+        EmployeeRepository.delete_employee(employee, db)
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to delete employee: {str(exc)}"
+        )
         
