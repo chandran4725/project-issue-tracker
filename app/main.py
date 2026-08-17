@@ -20,6 +20,7 @@ app = FastAPI(redirect_slashes=False)
 
 origins = [
     "https://issue-tracker-frontend-snowy.vercel.app",
+    "https://issue-tracker-frontend-jb7nv7izh-chandrans-projects-df24d617.vercel.app/"
 ]
 
 app.add_middleware(
