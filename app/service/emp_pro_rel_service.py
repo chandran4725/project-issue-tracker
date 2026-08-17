@@ -24,12 +24,15 @@ def get_all_assignments(
 
     if not permission.has_permission(
         current_employee.role.role_name,
-        Permission.MANAGE_PROJECT
+        Permission.VIEW
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Permission denied"
         )
+
+    if current_employee.role.role_name == "DEVELOPER":
+        return EmpProRelRepository.get_employee_projects(current_employee.emp_id, db)
 
     return EmpProRelRepository.get_all_assignments(db)
 
@@ -58,12 +61,9 @@ def get_assignment(
             detail="Assignment not found"
         )
 
-    if current_employee.emp_id == emp_id:
-        return assignment
-
     if permission.has_permission(
         current_employee.role.role_name,
-        Permission.MANAGE_PROJECT
+        Permission.VIEW
     ):
         return assignment
 

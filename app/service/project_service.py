@@ -10,6 +10,9 @@ from app.service.employee_service import get_current_employee
 from app.schemas.project import ProjectCreate, ProjectUpdate
 
 
+from app.repository import emp_pro_rel as EmpProRelRepository
+
+
 def get_all_projects(
     current_user: CurrentUser,
     db: Session
@@ -29,7 +32,14 @@ def get_all_projects(
             detail="Permission denied"
         )
 
-    return ProjectRepository.get_all_projects(db)
+    all_projects = ProjectRepository.get_all_projects(db)
+
+    if current_employee.role.role_name == "DEVELOPER":
+        user_assignments = EmpProRelRepository.get_employee_projects(current_employee.emp_id, db)
+        assigned_pro_ids = {a.pro_id for a in user_assignments}
+        return [p for p in all_projects if p.pro_id in assigned_pro_ids]
+
+    return all_projects
 
 
 def get_project_by_id(
@@ -62,6 +72,15 @@ def get_project_by_id(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Permission denied"
         )
+
+    if current_employee.role.role_name == "DEVELOPER":
+        user_assignments = EmpProRelRepository.get_employee_projects(current_employee.emp_id, db)
+        assigned_pro_ids = {a.pro_id for a in user_assignments}
+        if pro_id not in assigned_pro_ids:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not assigned to this project"
+            )
 
     return project
 

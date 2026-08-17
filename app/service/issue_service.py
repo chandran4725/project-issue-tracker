@@ -12,6 +12,9 @@ from app.service.employee_service import get_current_employee
 from app.schemas.issue import IssueCreate, IssueUpdate
 
 
+from app.repository import emp_pro_rel as EmpProRelRepository
+
+
 def get_all_issues(
     current_user: CurrentUser,
     db: Session
@@ -31,7 +34,17 @@ def get_all_issues(
             detail="Permission denied"
         )
 
-    return IssueRepository.get_all_issues(db)
+    all_issues = IssueRepository.get_all_issues(db)
+
+    if current_employee.role.role_name == "DEVELOPER":
+        user_assignments = EmpProRelRepository.get_employee_projects(current_employee.emp_id, db)
+        assigned_pro_ids = {a.pro_id for a in user_assignments}
+        return [
+            i for i in all_issues
+            if i.pro_id in assigned_pro_ids or i.emp_id == current_employee.emp_id
+        ]
+
+    return all_issues
 
 
 def get_issue_by_id(
@@ -65,6 +78,15 @@ def get_issue_by_id(
             detail="Permission denied"
         )
 
+    if current_employee.role.role_name == "DEVELOPER":
+        user_assignments = EmpProRelRepository.get_employee_projects(current_employee.emp_id, db)
+        assigned_pro_ids = {a.pro_id for a in user_assignments}
+        if issue.pro_id not in assigned_pro_ids and issue.emp_id != current_employee.emp_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Permission denied: Issue belongs to an unassigned project"
+            )
+
     return issue
 
 
@@ -87,6 +109,15 @@ def create_issue(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to create issues"
         )
+
+    if current_employee.role.role_name == "DEVELOPER":
+        user_assignments = EmpProRelRepository.get_employee_projects(current_employee.emp_id, db)
+        assigned_pro_ids = {a.pro_id for a in user_assignments}
+        if issue_create.pro_id not in assigned_pro_ids:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only create issues for projects assigned to you"
+            )
 
     employee = EmployeeRepository.get_employee_by_id(
         issue_create.emp_id,
@@ -146,6 +177,15 @@ def update_issue(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Issue not found"
         )
+
+    if current_employee.role.role_name == "DEVELOPER":
+        user_assignments = EmpProRelRepository.get_employee_projects(current_employee.emp_id, db)
+        assigned_pro_ids = {a.pro_id for a in user_assignments}
+        if issue.pro_id not in assigned_pro_ids and issue.emp_id != current_employee.emp_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Permission denied: Cannot update issue for unassigned project"
+            )
 
     if current_employee.emp_id != issue.emp_id:
 

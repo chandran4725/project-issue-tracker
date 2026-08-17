@@ -22,7 +22,7 @@ def get_all_roles(
 
     if not permission.has_permission(
         current_employee.role.role_name,
-        Permission.MANAGE_EMPLOYEE
+        Permission.VIEW
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -45,7 +45,7 @@ def get_role_by_id(
 
     if not permission.has_permission(
         current_employee.role.role_name,
-        Permission.MANAGE_EMPLOYEE
+        Permission.VIEW
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

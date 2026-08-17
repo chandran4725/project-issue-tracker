@@ -12,10 +12,37 @@ from app.auth.auth import CurrentUser, get_current_user
 from app.util.database import get_db
 
 
+from pydantic import BaseModel
+
+
+class SyncClerkRequest(BaseModel):
+    email: str | None = None
+    name: str | None = None
+
+
 router = APIRouter(
     prefix="/api/employee",
     tags=["employee"]
 )
+
+
+@router.post(
+    "/sync-clerk",
+    response_model=EmployeeResponse
+)
+def sync_clerk_employee(
+    payload: SyncClerkRequest | None = None,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    email = payload.email if payload else None
+    name = payload.name if payload else None
+    return employee_service.sync_clerk_employee(
+        email,
+        name,
+        current_user,
+        db
+    )
 
 
 @router.get(
@@ -25,12 +52,10 @@ router = APIRouter(
 def get_all_employees(
     current_user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db),
-    email: str | None = Cookie(default=None)
 ):
     return employee_service.get_all_employees(
         current_user,
-        db,
-        email
+        db
     )
 
 
