@@ -196,10 +196,21 @@ def create_employee(
             detail="Employee with this email already exists"
         )
 
-    # Send Clerk invitation
-    invite_employee(
-        email=employee_create.email
-    )
+    # Validate role
+    role = RoleRepository.get_role_by_id(employee_create.role_id, db)
+    if not role:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Role not found with the specified role_id"
+        )
+
+    # Send Clerk invitation (safely non-blocking for DB creation)
+    try:
+        invite_employee(
+            email=employee_create.email
+        )
+    except Exception as err:
+        print(f"Warning: Clerk invitation error: {err}")
 
     # Create local employee
     employee = Employee(
@@ -209,10 +220,12 @@ def create_employee(
         clerk_emp_id=None
     )
 
-    return EmployeeRepository.create_employee(
+    created = EmployeeRepository.create_employee(
         employee,
         db
     )
+
+    return EmployeeRepository.get_employee_by_id(created.emp_id, db)
     
 def update_employee(
     emp_id: int,
@@ -250,7 +263,8 @@ def update_employee(
     if employee_update.role_id is not None:
         employee.role_id = employee_update.role_id
             
-    return EmployeeRepository.update_employee(employee,db)
+    EmployeeRepository.update_employee(employee, db)
+    return EmployeeRepository.get_employee_by_id(employee.emp_id, db)
 
 def delete_employee(
     emp_id: int,
