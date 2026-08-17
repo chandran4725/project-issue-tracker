@@ -36,8 +36,8 @@ def get_current_user(request: Request) -> CurrentUser:
                     return CurrentUser(user_id=user_id, email=email)
         except Exception as e:
             print("Clerk token verification error:", e)
-
-    return CurrentUser(user_id=TEST_CLERK_USER_ID, email=user_email)
+    fallback_user_id = f"clerk_dev_{user_email}" if user_email else TEST_CLERK_USER_ID
+    return CurrentUser(user_id=fallback_user_id, email=user_email)
         
 def convert_to_httpx_request(fastapi_request: Request) -> httpx.Request:
     return httpx.Request(

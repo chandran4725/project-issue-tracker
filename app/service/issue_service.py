@@ -41,7 +41,7 @@ def get_all_issues(
         assigned_pro_ids = {a.pro_id for a in user_assignments}
         return [
             i for i in all_issues
-            if i.pro_id in assigned_pro_ids or i.emp_id == current_employee.emp_id
+            if i.pro_id in assigned_pro_ids
         ]
 
     return all_issues
@@ -81,7 +81,7 @@ def get_issue_by_id(
     if current_employee.role.role_name == "DEVELOPER":
         user_assignments = EmpProRelRepository.get_employee_projects(current_employee.emp_id, db)
         assigned_pro_ids = {a.pro_id for a in user_assignments}
-        if issue.pro_id not in assigned_pro_ids and issue.emp_id != current_employee.emp_id:
+        if issue.pro_id not in assigned_pro_ids:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Permission denied: Issue belongs to an unassigned project"
@@ -181,14 +181,12 @@ def update_issue(
     if current_employee.role.role_name == "DEVELOPER":
         user_assignments = EmpProRelRepository.get_employee_projects(current_employee.emp_id, db)
         assigned_pro_ids = {a.pro_id for a in user_assignments}
-        if issue.pro_id not in assigned_pro_ids and issue.emp_id != current_employee.emp_id:
+        if issue.pro_id not in assigned_pro_ids:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Permission denied: Cannot update issue for unassigned project"
             )
-
-    if current_employee.emp_id != issue.emp_id:
-
+    else:
         if not permission.has_permission(
             current_employee.role.role_name,
             Permission.MANAGE_ISSUE

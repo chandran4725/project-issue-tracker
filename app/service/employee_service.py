@@ -45,19 +45,6 @@ def get_current_employee(
         )
         employee = EmployeeRepository.create_employee(new_emp, db)
 
-    # 4. Fallback for initial setup / unlinked employees
-    if not employee:
-        all_emps = EmployeeRepository.get_all_employees(db)
-        if all_emps:
-            for emp in all_emps:
-                if not emp.clerk_emp_id:
-                    emp.clerk_emp_id = current_user.user_id
-                    EmployeeRepository.update_employee(emp, db)
-                    employee = emp
-                    break
-            if not employee:
-                employee = all_emps[0]
-
     if not employee:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -75,20 +62,21 @@ def sync_clerk_employee(
 ) -> Employee:
     target_email = email or current_user.email
 
-    # 1. Lookup by clerk_emp_id
-    employee = EmployeeRepository.get_employee_by_clerk_id(current_user.user_id, db)
-    if employee:
-        return employee
-
-    # 2. Lookup by email
+    # 1. Lookup by target email FIRST (crucial for invited employees where clerk_emp_id is NULL)
     if target_email:
         employee = EmployeeRepository.get_employee_by_email(target_email, db)
         if employee:
-            employee.clerk_emp_id = current_user.user_id
+            if employee.clerk_emp_id != current_user.user_id:
+                employee.clerk_emp_id = current_user.user_id
             if name and not employee.name:
                 employee.name = name
             EmployeeRepository.update_employee(employee, db)
             return employee
+
+    # 2. Lookup by clerk_emp_id
+    employee = EmployeeRepository.get_employee_by_clerk_id(current_user.user_id, db)
+    if employee:
+        return employee
 
     # 3. Auto-create Employee for self-signup user (default role: ADMIN)
     if target_email:
